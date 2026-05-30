@@ -1,0 +1,29 @@
+currently doing update in storage.js from chatgpt - done
+add custom restore time not the whole required time - verify and checked 
+task are ignored for (sending email ) if once started without completion. - checked
+login - added 
+move code block to respective file 
+    - add button not working now started working - solved
+    - task are not being added to db - solved
+Notification not working - fixed (ony permission was denied by browser) 
+pip not working - solved
+make dependencies where needed and remove lots of imports to avoid circular choice. - partially done
+task need attention priority order fix when there are more than one task fall into same priority - done 
+work on different device while server is offline and later update log to server when it goes online. - done
+add daily diary or blog for a day - done 
+reorder the current streak prevention suggestion on what to do next card - done
+
+==================================================
+
+an analytical engine
+    - AI GUIDE
+    - auto add skills and metrics to task using ai 
+
+Balance your skills : radar chart for overall development (sustenable development)
+add timer for break  
+
+fix the bug for not EMAILING task not started within 3days
+
+Kanban Boards with Aging Indicators: A standard Kanban board shows the state of work, but adding "Work Item Age" (visualizing how long a card has sat in one column) highlights where momentum has died.
+
+urgency coloring and scheduling 

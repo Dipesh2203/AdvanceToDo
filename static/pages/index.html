@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tracker | Neumorphism Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/index.css" />
+</head>
+
+<body>
+    <main class="dashboard-shell">
+        <div class="header">
+            <div class="header-row">
+                <h1>Synttactic Dashboard</h1>
+                <nav class="nav-rail">
+                    <a href="/tracker" class="nav-link active">Tracker</a>
+                    <a href="/reports" class="nav-link">Reports</a>
+                    <a href="/skill-radar" class="nav-link">Skill Radar</a>
+                    <a href="/blog" class="nav-link">Daily Blog</a>
+                </nav>
+                <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark theme">🌙
+                    Dark</button>
+            </div>
+            <p>Soft UI time tracker with neumorphic design and smooth interactions</p>
+        </div>
+        <div class="main-grid">
+            <!-- Time Tracker at Top -->
+            <div class="card full-width time-tracker-card">
+                <div class="card-title">Time Tracker</div>
+                <div class="card-subtitle">Start and stop each task type</div>
+                <div id="runningTasksList" class="running-tasks-strip" aria-live="polite"></div>
+                <div class="tracker-carousel">
+                    <div id="logContainer" class="log-container"></div>
+                    <div class="carousel-controls" aria-label="Time tracker slider controls">
+                        <button id="logPrevButton" type="button" class="btn carousel-arrow"
+                            aria-label="Previous task">‹</button>
+                        <div id="logDots" class="carousel-dots" aria-label="Task pagination"></div>
+                        <button id="logNextButton" type="button" class="btn carousel-arrow"
+                            aria-label="Next task">›</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Assigned Tasks</div>
+                <div class="card-subtitle">Your planned subjects and targets</div>
+                <ul id="planList" class="plan-list"></ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Weekly Trend</div>
+                <div class="card-subtitle">Last 7 days study graph</div>
+                <div id="analysisChart" class="analysis-chart"></div>
+                <p id="analysisText" class="analysis-text"></p>
+            </div>
+
+            <!-- Bottom Right: Large Decorative Card -->
+            <div class="card section-bottom-right">
+                <div class="blob"></div>
+                <div class="card-title">Session Log</div>
+                <div class="card-subtitle">Recent task sessions</div>
+                <div class="timer-row" style="margin-top: 8px; margin-bottom: 10px;">
+                    <button type="button" class="timer-btn" data-log-filter="today" aria-pressed="true">Today</button>
+                    <button type="button" class="timer-btn" data-log-filter="week" aria-pressed="false">This
+                        Week</button>
+                    <button type="button" class="timer-btn" data-log-filter="month" aria-pressed="false">This
+                        Month</button>
+                    <button type="button" class="timer-btn" data-log-filter="all" aria-pressed="false">All</button>
+                    <button type="button" class="timer-btn" data-log-filter="date" aria-pressed="false">Custom
+                        Date</button>
+                    <input id="logFilterDate" type="date" class="input-field log-filter-date-input" />
+                </div>
+                <div id="logFilterSummary" class="today-date" style="margin-bottom: 8px;"></div>
+                <div class="today-date" id="sessionDate"></div>
+                <ul id="sessionLog" class="plan-list" style="max-height: 200px; overflow-y: auto;"></ul>
+                <div class="nav-dots">
+                    <div class="dot active"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Task Time Log</div>
+                <div class="card-subtitle">Track time spent by task with flexible filters</div>
+                <div class="timer-row" style="margin-top: 8px; margin-bottom: 10px;">
+                    <button type="button" class="timer-btn" data-task-time-filter="today"
+                        aria-pressed="true">Today</button>
+                    <button type="button" class="timer-btn" data-task-time-filter="week" aria-pressed="false">This
+                        Week</button>
+                    <button type="button" class="timer-btn" data-task-time-filter="month" aria-pressed="false">This
+                        Month</button>
+                    <button type="button" class="timer-btn" data-task-time-filter="all"
+                        aria-pressed="false">All</button>
+                    <button type="button" class="timer-btn" data-task-time-filter="date" aria-pressed="false">Custom
+                        Date</button>
+                    <input id="taskTimeFilterDate" type="date" class="input-field task-time-filter-date-input" />
+                    <select id="taskTimeSubjectFilter" class="input-field task-time-subject-filter">
+                        <option value="all">All tasks</option>
+                    </select>
+                </div>
+                <div id="taskTimeSummary" class="today-date" style="margin-bottom: 8px;"></div>
+                <ul id="taskTimeLogList" class="plan-list" style="max-height: 220px; overflow-y: auto;"></ul>
+            </div>
+
+            <div class="card full-width">
+                <div class="card-title">Completed Tasks</div>
+                <div class="card-subtitle">Tasks finished for today and one-time goals</div>
+                <ul id="completedTaskList" class="plan-list"></ul>
+            </div>
+        </div>
+    </main>
+
+    <div id="spendTimePanel" class="card spend-time-modal" aria-hidden="true">
+        <div class="card-title">Add Spent Time</div>
+        <div class="card-subtitle">Choose a task and add minutes quickly</div>
+        <form id="spendTimeForm" class="plan-form" style="margin-top: 12px;">
+            <select id="spendSubjectSelect" class="input-field" aria-label="Select task" required></select>
+            <select id="spendFactorSelect" class="input-field" aria-label="Select factor" required></select>
+            <input type="number" id="spendMinutesInput" min="1" max="600" step="5" placeholder="Minutes spent"
+                class="input-field" required />
+            <button type="submit" class="btn btn-primary">Add Time</button>
+        </form>
+    </div>
+
+    <button id="openPlanButton" class="btn btn-primary icon-toggle-btn floating-add-btn" type="button"
+        aria-expanded="false" aria-controls="addTaskPanel" aria-label="Add task">+</button>
+
+    <div id="addTaskPanel" class="card add-task-modal add-task-panel-hidden">
+        <div class="card-title">Add Task</div>
+        <div class="card-subtitle">Set a subject, target, task type, skill tags, factor tags, and optional deadline
+        </div>
+        <form id="planForm" class="plan-form" style="margin-top: 12px;">
+            <input type="text" id="subjectInput" placeholder="Subject name" class="input-field" maxlength="40"
+                required />
+            <input type="number" id="targetInput" min="10" max="600" placeholder="Target (min)" class="input-field"
+                required />
+            <select id="frequencyInput" class="input-field" aria-label="Task frequency">
+                <option value="everyday" selected>Everyday task</option>
+                <option value="singleton">One-time task</option>
+            </select>
+            <label class="deadline-toggle-row" for="deadlineToggleInput">
+                <input type="checkbox" id="deadlineToggleInput" />
+                Set deadline for this task
+            </label>
+            <input type="date" id="dueDateInput" class="input-field" />
+            <input type="text" id="skillTagsInput" placeholder="Skill tags (comma separated, e.g. communication)"
+                class="input-field" maxlength="120" />
+            <div id="skillTagSuggestions" class="tag-suggestion-group" aria-label="Available skill tags"></div>
+            <input type="text" id="factorTagsInput" placeholder="Factor tags (comma separated, e.g. listening, clarity)"
+                class="input-field" maxlength="160" />
+            <div id="factorTagSuggestions" class="tag-suggestion-group" aria-label="Available factor tags"></div>
+            <button type="submit" class="btn btn-primary">Add To Plan</button>
+            <button type="button" id="cancelTaskEditButton" class="btn" style="margin-top: 8px; display: none;">Cancel
+                Edit</button>
+        </form>
+    </div>
+
+    <script type="module" src="/js/script.js"></script>
+</body>
+
+</html>

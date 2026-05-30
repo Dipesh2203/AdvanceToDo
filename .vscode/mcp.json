@@ -1,0 +1,21 @@
+{
+    "servers": {
+        "mempalace": {
+            "type": "stdio",
+            "command": "py",
+            "args": [
+                "-m",
+                "mempalace.mcp_server"
+            ]
+        },
+        "filesystem": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "${workspaceFolder}"
+            ]
+        }
+    }
+}

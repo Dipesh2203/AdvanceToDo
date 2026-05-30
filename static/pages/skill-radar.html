@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skill Radar Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/css/skill-radar.css" />
+</head>
+
+<body>
+    <main class="shell">
+        <header class="topbar">
+            <div class="brand">
+                <h1>Skill Radar Studio</h1>
+                <p>Factor-first growth view</p>
+            </div>
+            <nav class="nav">
+                <a href="/tracker">Tracker</a>
+                <a href="/reports">Reports</a>
+                <a href="/skill-radar">Skill Radar</a>
+                <a href="/blog">Daily Blog</a>
+            </nav>
+            <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark theme">🌙
+                Dark</button>
+        </header>
+
+        <section class="hero">
+            <h2>Your Skills from Real Task Data</h2>
+            <p>Cumulative factor minutes are aggregated from all logged history. The radar shape is relative strength
+                inside each skill, not a fixed proficiency cap.</p>
+            <div class="kpi-grid" id="kpiGrid">
+                <article class="kpi"><strong>Skills</strong><span id="kpiSkills">0</span></article>
+                <article class="kpi"><strong>Tagged Tasks</strong><span id="kpiTagged">0</span></article>
+                <article class="kpi"><strong>Total Tasks</strong><span id="kpiTotal">0</span></article>
+                <article class="kpi"><strong>Coverage</strong><span id="kpiCoverage">0%</span></article>
+            </div>
+        </section>
+
+        <p id="status">Loading skill radar...</p>
+        <section class="factor-lookup">
+            <h3>Factor Cumulative Lookup</h3>
+            <p>Enter a factor tag to see total historical minutes logged till date.</p>
+            <input id="factorLookupInput" type="text" placeholder="Example: authentication" />
+            <div id="factorLookupResult" class="factor-lookup-result">Type a factor to view cumulative total.</div>
+        </section>
+        <section class="calibration">
+            <h3>Personal Proficiency Calibration</h3>
+            <p>Set required hours per factor. Proficiency is then computed from your own thresholds.</p>
+            <div class="calibration-grid">
+                <input id="calibrationFactorInput" type="text" placeholder="Factor tag (example: authentication)" />
+                <input id="calibrationHoursInput" type="number" min="1" step="1" placeholder="Required hours" />
+                <button id="saveCalibrationButton" type="button">Save Threshold</button>
+            </div>
+            <div id="calibrationStatus" class="factor-lookup-result">No thresholds saved yet.</div>
+            <div id="calibrationList" class="calibration-list"></div>
+        </section>
+        <section id="skillGrid" class="grid"></section>
+    </main>
+
+    <script type="module" src="/js/account-controls.js"></script>
+    <script>
+        const stateEndpoint = "/api/state";
+        const skillGridEl = document.getElementById("skillGrid");
+        const statusEl = document.getElementById("status");
+        const kpiSkillsEl = document.getElementById("kpiSkills");
+        const kpiTaggedEl = document.getElementById("kpiTagged");
+        const kpiTotalEl = document.getElementById("kpiTotal");
+        const kpiCoverageEl = document.getElementById("kpiCoverage");
+        const factorLookupInputEl = document.getElementById("factorLookupInput");
+        const factorLookupResultEl = document.getElementById("factorLookupResult");
+        const calibrationFactorInputEl = document.getElementById("calibrationFactorInput");
+        const calibrationHoursInputEl = document.getElementById("calibrationHoursInput");
+        const saveCalibrationButtonEl = document.getElementById("saveCalibrationButton");
+        const calibrationStatusEl = document.getElementById("calibrationStatus");
+        const calibrationListEl = document.getElementById("calibrationList");
+        const CALIBRATION_STORE_KEY = "skill-radar-factor-threshold-hours-v1";
+        const THEME_KEY = "study-tracker-theme";
+        const themeToggleEl = document.getElementById("themeToggle");
+
+        setupTheme();
+
+        init().catch((error) => {
+            statusEl.textContent = "Could not load radar data right now.";
+            console.error(error);
+        });
+
+        function setupTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+            applyTheme(savedTheme);
+
+            if (!themeToggleEl) {
+                return;
+            }
+
+            themeToggleEl.addEventListener("click", () => {
+                const isDark = document.body.classList.contains("dark-theme");
+                applyTheme(isDark ? "light" : "dark");
+            });
+        }
+
+        function applyTheme(theme) {
+            if (theme === "dark") {
+                document.body.classList.add("dark-theme");
+                if (themeToggleEl) {
+                    themeToggleEl.textContent = "☀ Light";
+                    themeToggleEl.setAttribute("aria-label", "Switch to light theme");
+                }
+            } else {
+                document.body.classList.remove("dark-theme");
+                if (themeToggleEl) {
+                    themeToggleEl.textContent = "🌙 Dark";
+                    themeToggleEl.setAttribute("aria-label", "Switch to dark theme");
+                }
+            }
+
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        async function init() {
+            const response = await fetch(stateEndpoint, {
+                method: "GET",
+                cache: "no-store",
+                credentials: "same-origin"
+            });
+
+            if (response.status === 401) {
+                statusEl.innerHTML = "Please sign in first on <a href=\"/tracker\">Tracker</a> to view skill radar.";
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Failed to load state");
+            }
+
+            const payload = await response.json();
+            const state = payload && payload.state ? payload.state : null;
+            const subjects = Array.isArray(state && state.subjects) ? state.subjects : [];
+            const logs = state && typeof state.logs === "object" ? state.logs : {};
+            const factorLogs = state && typeof state.factorLogs === "object" ? state.factorLogs : {};
+            const globalFactorTotals = buildGlobalFactorTotals(subjects, logs, factorLogs);
+            const calibrationThresholds = loadCalibrationThresholds();
+
+            const model = buildSkillModel(subjects, logs, factorLogs, calibrationThresholds, globalFactorTotals);
+            const taggedTasks = subjects.filter((s) => normalizeTagList(s && s.skillTags).length > 0 && normalizeTagList(s && s.factorTags).length > 0).length;
+            const coverage = subjects.length === 0 ? 0 : Math.round((taggedTasks / subjects.length) * 100);
+
+            kpiSkillsEl.textContent = String(model.length);
+            kpiTaggedEl.textContent = String(taggedTasks);
+            kpiTotalEl.textContent = String(subjects.length);
+            kpiCoverageEl.textContent = `${coverage}%`;
+
+            if (model.length === 0) {
+                statusEl.textContent = "No skill-tagged tasks found yet. Add skill and factor tags to tasks first.";
+                skillGridEl.innerHTML = '<div class="empty">No radar cards to display. Open Tracker and add skill/factor tags on tasks.</div>';
+                return;
+            }
+
+            const topSkill = model[0];
+            statusEl.textContent = `Loaded ${model.length} skills from all historical logs. Highest cumulative evidence: ${toTitle(topSkill.skill)} (${formatHours(topSkill.totalMinutes)}).`;
+            renderSkillCards(model);
+            setupFactorLookup(globalFactorTotals, calibrationThresholds);
+            setupCalibration(globalFactorTotals, calibrationThresholds, subjects, logs, factorLogs);
+        }
+
+        function setupCalibration(globalFactorTotals, calibrationThresholds, subjects, logs, factorLogs) {
+            if (!saveCalibrationButtonEl || !calibrationStatusEl || !calibrationListEl) {
+                return;
+            }
+
+            renderCalibrationList(calibrationThresholds);
+
+            saveCalibrationButtonEl.addEventListener("click", () => {
+                const factor = String(calibrationFactorInputEl && calibrationFactorInputEl.value || "").trim().toLowerCase();
+                const requiredHours = Number(calibrationHoursInputEl && calibrationHoursInputEl.value);
+
+                if (!factor || Number.isNaN(requiredHours) || requiredHours <= 0) {
+                    calibrationStatusEl.textContent = "Enter valid factor tag and required hours > 0.";
+                    return;
+                }
+
+                calibrationThresholds[factor] = requiredHours;
+                saveCalibrationThresholds(calibrationThresholds);
+                renderCalibrationList(calibrationThresholds);
+                updateFactorLookupResult(factorLookupInputEl ? factorLookupInputEl.value : "", globalFactorTotals, calibrationThresholds);
+
+                const model = buildSkillModel(subjects, logs, factorLogs, calibrationThresholds, globalFactorTotals);
+                renderSkillCards(model);
+
+                calibrationStatusEl.textContent = `Saved threshold for ${toTitle(factor)}: ${requiredHours}h.`;
+                if (calibrationFactorInputEl) {
+                    calibrationFactorInputEl.value = "";
+                }
+                if (calibrationHoursInputEl) {
+                    calibrationHoursInputEl.value = "";
+                }
+            });
+        }
+
+        function renderCalibrationList(calibrationThresholds) {
+            if (!calibrationListEl || !calibrationStatusEl) {
+                return;
+            }
+
+            const entries = Object.entries(calibrationThresholds)
+                .filter(([, hours]) => Number(hours) > 0)
+                .sort((a, b) => a[0].localeCompare(b[0]));
+
+            if (entries.length === 0) {
+                calibrationStatusEl.textContent = "No thresholds saved yet.";
+                calibrationListEl.innerHTML = "";
+                return;
+            }
+
+            calibrationStatusEl.textContent = `${entries.length} factor thresholds saved.`;
+            calibrationListEl.innerHTML = "";
+
+            entries.forEach(([factor, hours]) => {
+                const pill = document.createElement("span");
+                pill.className = "calibration-pill";
+                pill.textContent = `${toTitle(factor)} ${Number(hours).toFixed(0)}h`;
+                calibrationListEl.appendChild(pill);
+            });
+        }
+
+        function setupFactorLookup(globalFactorTotals, calibrationThresholds = {}) {
+            if (!factorLookupInputEl || !factorLookupResultEl) {
+                return;
+            }
+
+            const factors = Array.from(globalFactorTotals.keys()).sort();
+            if (factors.length === 0) {
+                factorLookupResultEl.textContent = "No factor totals found yet. Log time with factor tags first.";
+                return;
+            }
+
+            const defaultFactor = factors[0];
+            factorLookupInputEl.value = defaultFactor;
+            updateFactorLookupResult(defaultFactor, globalFactorTotals, calibrationThresholds);
+
+            factorLookupInputEl.addEventListener("input", () => {
+                updateFactorLookupResult(factorLookupInputEl.value, globalFactorTotals, calibrationThresholds);
+            });
+        }
+
+        function updateFactorLookupResult(rawValue, globalFactorTotals, calibrationThresholds = {}) {
+            const normalized = String(rawValue || "").trim().toLowerCase();
+            if (!normalized) {
+                factorLookupResultEl.textContent = "Type a factor to view cumulative total.";
+                return;
+            }
+
+            const direct = globalFactorTotals.get(normalized);
+            if (Number(direct) > 0) {
+                const thresholdHours = Number(calibrationThresholds[normalized] || 0);
+                if (thresholdHours > 0) {
+                    const proficiency = (direct / (thresholdHours * 60)) * 100;
+                    factorLookupResultEl.textContent = `${toTitle(normalized)}: ${formatHours(direct)} (${Math.round(direct)} minutes total) | threshold ${thresholdHours}h | proficiency ${proficiency.toFixed(1)}%`;
+                } else {
+                    factorLookupResultEl.textContent = `${toTitle(normalized)}: ${formatHours(direct)} (${Math.round(direct)} minutes total)`;
+                }
+                return;
+            }
+
+            const suggestions = Array.from(globalFactorTotals.keys()).filter((key) => key.includes(normalized)).slice(0, 4);
+            if (suggestions.length > 0) {
+                factorLookupResultEl.textContent = `No exact match. Try: ${suggestions.map((item) => toTitle(item)).join(", ")}`;
+                return;
+            }
+
+            factorLookupResultEl.textContent = "No data for this factor yet.";
+        }
+
+        function buildGlobalFactorTotals(subjects, logs, factorLogs) {
+            const explicitTotals = buildExplicitFactorTotals(factorLogs);
+            const fallbackTotals = new Map();
+
+            subjects.forEach((subject) => {
+                const factorTags = normalizeTagList(subject && subject.factorTags);
+                if (factorTags.length === 0) {
+                    return;
+                }
+
+                const taskMinutes = getTaskProgressMinutes(subject, logs);
+                if (taskMinutes <= 0) {
+                    return;
+                }
+
+                const share = taskMinutes / factorTags.length;
+                factorTags.forEach((factor) => {
+                    fallbackTotals.set(factor, (fallbackTotals.get(factor) || 0) + share);
+                });
+            });
+
+            const allFactors = new Set([...explicitTotals.keys(), ...fallbackTotals.keys()]);
+            const combined = new Map();
+            allFactors.forEach((factor) => {
+                const explicit = Number(explicitTotals.get(factor) || 0);
+                const fallback = Number(fallbackTotals.get(factor) || 0);
+                combined.set(factor, explicit > 0 ? explicit : fallback);
+            });
+
+            return combined;
+        }
+
+        function buildSkillModel(subjects, logs, factorLogs, calibrationThresholds = {}, globalFactorTotals = null) {
+            const skillMap = new Map();
+            const explicitFactorTotals = buildExplicitFactorTotals(factorLogs);
+            const factorFallbackTotals = new Map();
+            const actualFactorTotals = globalFactorTotals instanceof Map ? globalFactorTotals : buildGlobalFactorTotals(subjects, logs, factorLogs);
+
+            subjects.forEach((subject) => {
+                const skillTags = normalizeTagList(subject && subject.skillTags);
+                const factorTags = normalizeTagList(subject && subject.factorTags);
+                if (skillTags.length === 0 || factorTags.length === 0) {
+                    return;
+                }
+
+                const taskMinutes = getTaskProgressMinutes(subject, logs);
+                const split = skillTags.length * factorTags.length;
+                const fallbackShare = split > 0 ? taskMinutes / split : 0;
+                const taskId = subject.id || subject.subject || "task";
+
+                skillTags.forEach((skill) => {
+                    if (!skillMap.has(skill)) {
+                        skillMap.set(skill, { skill, tasks: new Set(), factors: new Map() });
+                    }
+
+                    const skillEntry = skillMap.get(skill);
+                    skillEntry.tasks.add(taskId);
+
+                    factorTags.forEach((factor) => {
+                        if (!skillEntry.factors.has(factor)) {
+                            skillEntry.factors.set(factor, {
+                                factor,
+                                fallbackMinutes: 0
+                            });
+                        }
+
+                        const factorEntry = skillEntry.factors.get(factor);
+                        factorEntry.fallbackMinutes += fallbackShare;
+                        factorFallbackTotals.set(factor, (factorFallbackTotals.get(factor) || 0) + fallbackShare);
+                    });
+                });
+            });
+
+            return Array.from(skillMap.values()).map((skillEntry) => {
+                const factors = Array.from(skillEntry.factors.values()).map((factorEntry) => {
+                    const explicitMinutes = Number(explicitFactorTotals.get(factorEntry.factor) || 0);
+                    const factorFallbackTotal = Number(factorFallbackTotals.get(factorEntry.factor) || 0);
+                    const explicitDistributed = explicitMinutes > 0 && factorFallbackTotal > 0
+                        ? explicitMinutes * (factorEntry.fallbackMinutes / factorFallbackTotal)
+                        : 0;
+                    const cumulativeMinutes = explicitMinutes > 0
+                        ? explicitDistributed
+                        : factorEntry.fallbackMinutes;
+                    return {
+                        factor: factorEntry.factor,
+                        cumulativeMinutes,
+                        actualMinutes: Number(actualFactorTotals.get(factorEntry.factor) || cumulativeMinutes),
+                        source: explicitMinutes > 0 ? "factor-log-weighted" : "task-share"
+                    };
+                });
+
+                const totalMinutes = factors.reduce((sum, item) => sum + item.cumulativeMinutes, 0);
+                const maxFactorMinutes = Math.max(...factors.map((item) => item.cumulativeMinutes), 0);
+
+                const scoredFactors = factors
+                    .map((item) => {
+                        const relativeStrength = maxFactorMinutes > 0
+                            ? (item.cumulativeMinutes / maxFactorMinutes) * 100
+                            : 0;
+                        const coverageShare = totalMinutes > 0
+                            ? (item.cumulativeMinutes / totalMinutes) * 100
+                            : 0;
+                        const requiredHours = Number(calibrationThresholds[item.factor] || 0);
+                        const proficiency = requiredHours > 0
+                            ? (item.actualMinutes / (requiredHours * 60)) * 100
+                            : null;
+
+                        return {
+                            factor: item.factor,
+                            cumulativeMinutes: Number(item.cumulativeMinutes.toFixed(2)),
+                            actualMinutes: Number(item.actualMinutes.toFixed(2)),
+                            relativeStrength: Number(relativeStrength.toFixed(1)),
+                            coverageShare: Number(coverageShare.toFixed(1)),
+                            source: item.source,
+                            requiredHours: requiredHours > 0 ? requiredHours : null,
+                            proficiency: proficiency === null ? null : Number(proficiency.toFixed(1))
+                        };
+                    })
+                    .sort((a, b) => b.cumulativeMinutes - a.cumulativeMinutes)
+                    .slice(0, 6);
+
+                const confidence = computeConfidenceFromEvidence(totalMinutes);
+                const proficiencyFactors = scoredFactors.filter((factor) => typeof factor.proficiency === "number");
+                const proficiencyEstimate = proficiencyFactors.length > 0
+                    ? proficiencyFactors.reduce((sum, factor) => sum + factor.proficiency, 0) / proficiencyFactors.length
+                    : null;
+
+                return {
+                    skill: skillEntry.skill,
+                    taskCount: skillEntry.tasks.size,
+                    factors: scoredFactors,
+                    totalMinutes: Number(totalMinutes.toFixed(2)),
+                    confidence: Number(confidence.toFixed(1)),
+                    proficiencyEstimate: proficiencyEstimate === null ? null : Number(proficiencyEstimate.toFixed(1))
+                };
+            }).filter((entry) => entry.factors.length > 0).sort((a, b) => b.totalMinutes - a.totalMinutes);
+        }
+
+        function buildExplicitFactorTotals(factorLogs) {
+            const totals = new Map();
+            if (!factorLogs || typeof factorLogs !== "object") {
+                return totals;
+            }
+
+            Object.values(factorLogs).forEach((dayLog) => {
+                if (!dayLog || typeof dayLog !== "object") {
+                    return;
+                }
+
+                Object.entries(dayLog).forEach(([factor, value]) => {
+                    const normalizedFactor = String(factor || "").trim().toLowerCase();
+                    const minutes = Number(value) || 0;
+                    if (!normalizedFactor || minutes <= 0) {
+                        return;
+                    }
+
+                    totals.set(normalizedFactor, (totals.get(normalizedFactor) || 0) + minutes);
+                });
+            });
+
+            return totals;
+        }
+
+        function computeConfidenceFromEvidence(totalMinutes) {
+            const hours = totalMinutes / 60;
+            const halfSaturationHours = 40;
+            return 100 * (1 - Math.exp(-hours / halfSaturationHours));
+        }
+
+        function renderSkillCards(model) {
+            const palette = ["#0f766e", "#c65f1a", "#6f7f2b", "#bc8a17", "#136f63", "#9a4f1e"];
+            skillGridEl.innerHTML = "";
+
+            model.forEach((entry, index) => {
+                const color = palette[index % palette.length];
+                const card = document.createElement("article");
+                card.className = "skill-card";
+
+                const title = document.createElement("h3");
+                title.textContent = `${toTitle(entry.skill)}  ${formatHours(entry.totalMinutes)} evidence`;
+
+                const meta = document.createElement("p");
+                meta.className = "meta";
+                const proficiencyLabel = typeof entry.proficiencyEstimate === "number"
+                    ? ` | calibrated proficiency ${entry.proficiencyEstimate.toFixed(1)}%`
+                    : " | add thresholds to estimate proficiency";
+                meta.textContent = `${entry.factors.length} factors from ${entry.taskCount} mapped tasks | confidence ${entry.confidence.toFixed(1)}%${proficiencyLabel}`;
+
+                const legend = document.createElement("div");
+                legend.className = "legend";
+                legend.innerHTML = `<span><i style=\"background:${color};\"></i>Relative factor strength (inside this skill)</span>`;
+
+                const chartWrap = document.createElement("div");
+                chartWrap.innerHTML = buildRadarSvg(entry, color);
+
+                const chips = document.createElement("div");
+                chips.className = "chip-row";
+                entry.factors.slice(0, 6).forEach((factor) => {
+                    const chip = document.createElement("span");
+                    chip.className = "chip";
+                    const proficiencyPart = typeof factor.proficiency === "number"
+                        ? ` | prof ${factor.proficiency.toFixed(1)}%`
+                        : "";
+                    chip.textContent = `${toTitle(factor.factor)} ${formatHours(factor.actualMinutes)} (${factor.coverageShare.toFixed(1)}%)${proficiencyPart}`;
+                    chips.appendChild(chip);
+                });
+
+                card.appendChild(title);
+                card.appendChild(meta);
+                card.appendChild(legend);
+                card.appendChild(chartWrap);
+                card.appendChild(chips);
+                skillGridEl.appendChild(card);
+            });
+        }
+
+        function buildRadarSvg(entry, color) {
+            const size = 240;
+            const center = size / 2;
+            const radius = 76;
+            const labels = entry.factors.map((factor) => toTitle(factor.factor));
+            const strengths = entry.factors.map((factor) => factor.relativeStrength);
+            const levels = [20, 40, 60, 80, 100];
+
+            const rings = levels.map((level) => `<polygon points="${ringPoints(labels.length, level, center, radius)}" fill="none" stroke="rgba(120, 110, 90, 0.24)" stroke-width="1" />`).join("");
+            const axes = labels.map((_, idx) => {
+                const angle = (Math.PI * 2 * idx) / labels.length - Math.PI / 2;
+                const x = center + Math.cos(angle) * radius;
+                const y = center + Math.sin(angle) * radius;
+                return `<line x1="${center}" y1="${center}" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" stroke="rgba(120, 110, 90, 0.2)" stroke-width="1" />`;
+            }).join("");
+
+            const labelNodes = labels.map((label, idx) => {
+                const angle = (Math.PI * 2 * idx) / labels.length - Math.PI / 2;
+                const x = center + Math.cos(angle) * (radius + 18);
+                const y = center + Math.sin(angle) * (radius + 18);
+                return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="currentColor">${escapeHtml(label)}</text>`;
+            }).join("");
+
+            const current = `<polygon points="${scorePoints(strengths, center, radius)}" fill="${color}30" stroke="${color}" stroke-width="2" />`;
+
+            return `<svg class="radar-svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeHtml(toTitle(entry.skill))} radar">${rings}${axes}${current}${labelNodes}</svg>`;
+        }
+
+        function ringPoints(count, score, center, radius) {
+            const values = Array.from({ length: count }, () => score);
+            return scorePoints(values, center, radius);
+        }
+
+        function scorePoints(values, center, radius) {
+            return values.map((value, index) => {
+                const angle = (Math.PI * 2 * index) / values.length - Math.PI / 2;
+                const scale = clamp(Number(value) || 0, 0, 100) / 100;
+                const x = center + Math.cos(angle) * radius * scale;
+                const y = center + Math.sin(angle) * radius * scale;
+                return `${x.toFixed(2)},${y.toFixed(2)}`;
+            }).join(" ");
+        }
+
+        function getTaskProgressMinutes(subject, logs) {
+            if (!subject || !logs || typeof logs !== "object") {
+                return 0;
+            }
+
+            return Object.values(logs).reduce((sum, daily) => {
+                return sum + (Number(daily && daily[subject.id]) || 0);
+            }, 0);
+        }
+
+        function normalizeTagList(value) {
+            const raw = Array.isArray(value) ? value : (typeof value === "string" ? value.split(",") : []);
+            const unique = [];
+            const seen = new Set();
+
+            raw.forEach((item) => {
+                if (typeof item !== "string") {
+                    return;
+                }
+
+                const trimmed = item.trim().toLowerCase();
+                if (!trimmed || seen.has(trimmed)) {
+                    return;
+                }
+
+                seen.add(trimmed);
+                unique.push(trimmed);
+            });
+
+            return unique;
+        }
+
+        function toTitle(value) {
+            if (typeof value !== "string") {
+                return "";
+            }
+
+            return value.split(/\s+/).filter(Boolean).map((word) => {
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(" ");
+        }
+
+        function formatHours(minutes) {
+            const numericMinutes = Number(minutes) || 0;
+            if (numericMinutes <= 0) {
+                return "0h";
+            }
+
+            const hours = numericMinutes / 60;
+            if (hours < 1) {
+                return `${Math.round(numericMinutes)}m`;
+            }
+
+            return `${hours.toFixed(1)}h`;
+        }
+
+        function loadCalibrationThresholds() {
+            try {
+                const raw = localStorage.getItem(CALIBRATION_STORE_KEY);
+                if (!raw) {
+                    return {};
+                }
+
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (_error) {
+                return {};
+            }
+        }
+
+        function saveCalibrationThresholds(thresholds) {
+            try {
+                localStorage.setItem(CALIBRATION_STORE_KEY, JSON.stringify(thresholds));
+            } catch (_error) {
+                // Ignore storage failures and continue with in-memory values.
+            }
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        document.querySelectorAll(".nav a").forEach((link) => {
+            if (link.getAttribute("href") === "/skill-radar") {
+                link.classList.add("active");
+            }
+        });
+    </script>
+</body>
+
+</html>

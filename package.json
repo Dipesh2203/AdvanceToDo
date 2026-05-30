@@ -1,0 +1,30 @@
+{
+    "name": "advance-todo",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Study tracker with Express + SQLite backend persistence",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "build:css": "tailwindcss -i ./src/styles/app.css -o ./static/css/app.css --minify",
+        "dev:css": "tailwindcss -i ./src/styles/app.css -o ./static/css/app.css --watch",
+        "build:css:index": "tailwindcss -i ./src/styles/index.css -o ./static/css/index.css --minify",
+        "build:css:reports": "tailwindcss -i ./src/styles/reports.css -o ./static/css/reports.css --minify",
+        "build:css:daily-blog": "tailwindcss -i ./src/styles/daily-blog.css -o ./static/css/daily-blog.css --minify",
+        "build:css:skill-radar": "tailwindcss -i ./src/styles/skill-radar.css -o ./static/css/skill-radar.css --minify",
+        "build:css:sustainability-radar-preview": "tailwindcss -i ./src/styles/sustainability-radar-preview.css -o ./static/css/sustainability-radar-preview.css --minify",
+        "build:css:all": "npm run build:css && npm run build:css:index && npm run build:css:reports && npm run build:css:daily-blog && npm run build:css:skill-radar && npm run build:css:sustainability-radar-preview"
+    },
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "better-sqlite3": "^12.10.0",
+        "dotenv": "^17.4.2",
+        "express": "^4.21.2",
+        "nodemailer": "^8.0.4",
+        "qrcode-terminal": "^0.12.0",
+        "tailwindcss": "^4.2.4"
+    },
+    "devDependencies": {
+        "@tailwindcss/cli": "^4.2.4"
+    }
+}

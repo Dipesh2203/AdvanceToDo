@@ -1,0 +1,612 @@
+@import "tailwindcss";
+
+@source "../../static/pages/tracker.html";
+
+@theme {
+    --font-sans: "Poppins", sans-serif;
+}
+
+@layer base {
+    .tracker-page {
+        --bg-primary: #f5f7fa;
+        --bg-secondary: #e0e7f1;
+        --text-primary: #2d3748;
+        --text-secondary: #718096;
+        --accent-green: #a8d5ba;
+        --accent-blue: #a8d8ea;
+        --accent-peach: #ffe0b2;
+        --shadow-light: inset 8px 8px 14px rgba(176, 187, 205, 0.32);
+        --shadow-dark: inset -8px -8px 14px rgba(255, 255, 255, 0.9);
+        --shadow-inset: inset 6px 6px 12px rgba(173, 185, 204, 0.28), inset -6px -6px 12px rgba(255, 255, 255, 0.88);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 0;
+        min-height: 100vh;
+        padding: 28px 14px;
+        font-family: var(--font-sans);
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 50%, #dce8f5 100%);
+    }
+
+    .tracker-page *,
+    .tracker-page *::before,
+    .tracker-page *::after {
+        box-sizing: border-box;
+    }
+
+    .tracker-page.dark-theme {
+        --bg-primary: #1c2026;
+        --bg-secondary: #262b31;
+        --text-primary: #f2f4f7;
+        --text-secondary: #b5bcc4;
+        --shadow-light: inset 8px 8px 14px rgba(6, 8, 11, 0.5);
+        --shadow-dark: inset -8px -8px 14px rgba(64, 70, 77, 0.16);
+        --shadow-inset: inset 7px 7px 12px rgba(7, 9, 12, 0.58), inset -7px -7px 12px rgba(61, 67, 74, 0.14);
+        background: linear-gradient(135deg, #0f1114 0%, #171a1f 50%, #1e2329 100%);
+    }
+}
+
+@layer components {
+    .tracker-page .dashboard-shell {
+        @apply mx-auto w-full max-w-[1200px];
+    }
+
+    .tracker-page .header {
+        @apply mb-[18px];
+    }
+
+    .tracker-page .header-row {
+        @apply flex items-center justify-between gap-2.5 overflow-x-auto pb-0.5;
+        flex-wrap: nowrap;
+    }
+
+    .tracker-page .header h1 {
+        @apply m-0 shrink-0 text-[clamp(1.4rem,2.3vw,2rem)] font-bold;
+    }
+
+    .tracker-page .header p {
+        @apply mt-1.5 text-[0.9rem];
+        color: var(--text-secondary);
+    }
+
+    .tracker-page .nav-rail {
+        @apply mb-[18px] flex gap-2;
+    }
+
+    .tracker-page .nav-link,
+    .tracker-page .theme-toggle,
+    .tracker-page .btn,
+    .tracker-page .timer-btn,
+    .tracker-page .plan-item,
+    .tracker-page .log-item,
+    .tracker-page .session-item,
+    .tracker-page .remove-btn,
+    .tracker-page .input-field,
+    .tracker-page .log-item input {
+        border: 1px solid rgba(140, 154, 177, 0.16);
+        box-shadow: var(--shadow-inset) !important;
+    }
+
+    .tracker-page.dark-theme .card,
+    .tracker-page.dark-theme .nav-link,
+    .tracker-page.dark-theme .theme-toggle,
+    .tracker-page.dark-theme .btn,
+    .tracker-page.dark-theme .timer-btn,
+    .tracker-page.dark-theme .input-field,
+    .tracker-page.dark-theme .plan-item,
+    .tracker-page.dark-theme .log-item,
+    .tracker-page.dark-theme .session-item,
+    .tracker-page.dark-theme .remove-btn,
+    .tracker-page.dark-theme .log-item input {
+        border-color: rgba(132, 157, 191, 0.22);
+    }
+
+    .tracker-page .nav-link,
+    .tracker-page .theme-toggle {
+        @apply inline-flex cursor-pointer items-center rounded-[20px] px-4 py-[9px] text-[0.9rem] no-underline transition;
+        color: var(--text-secondary);
+        background: var(--bg-primary);
+        font-weight: 500;
+        transition: var(--transition);
+    }
+
+    .tracker-page .theme-toggle {
+        font-weight: 600;
+    }
+
+    .tracker-page .nav-link:hover,
+    .tracker-page .theme-toggle:hover,
+    .tracker-page .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: none;
+    }
+
+    .tracker-page .nav-link.active {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+        box-shadow: none;
+    }
+
+    .tracker-page .main-grid {
+        @apply mb-5 grid gap-5;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tracker-page .card {
+        @apply relative overflow-hidden rounded-[28px] p-6;
+        border: 1px solid rgba(140, 154, 177, 0.2);
+        box-shadow: var(--shadow-inset);
+        background: linear-gradient(135deg, #f0f4f8, #ffffff);
+    }
+
+    .tracker-page .card-title {
+        @apply mb-2 text-[1.3rem] font-bold;
+        color: var(--text-primary);
+    }
+
+    .tracker-page .card-subtitle {
+        @apply mb-4 text-[0.85rem];
+        color: var(--text-secondary);
+    }
+
+    .tracker-page.dark-theme .card,
+    .tracker-page.dark-theme .plan-item,
+    .tracker-page.dark-theme .log-item,
+    .tracker-page.dark-theme .session-item,
+    .tracker-page.dark-theme .log-item input,
+    .tracker-page.dark-theme .input-field,
+    .tracker-page.dark-theme .timer-btn,
+    .tracker-page.dark-theme .btn {
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #1f2329, #2a2f36);
+    }
+
+    .tracker-page .full-width {
+        grid-column: span 3;
+    }
+
+    .tracker-page .time-tracker-card {
+        @apply p-5;
+    }
+
+    .tracker-page .time-tracker-card .card-title {
+        @apply mb-1 text-[1.16rem];
+    }
+
+    .tracker-page .time-tracker-card .card-subtitle {
+        @apply mb-2.5 text-[0.82rem];
+    }
+
+    .tracker-page .log-container {
+        @apply grid gap-3;
+    }
+
+    .tracker-page .time-tracker-card .log-container {
+        @apply max-h-[260px] gap-2 overflow-y-auto pr-1;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        align-items: start;
+    }
+
+    .tracker-page .plan-list {
+        @apply mt-3 grid list-none gap-2.5;
+    }
+
+    .tracker-page .plan-item,
+    .tracker-page .session-item,
+    .tracker-page .log-item {
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #f0f4f8, #ffffff);
+    }
+
+    .tracker-page .plan-item {
+        @apply flex items-center justify-between rounded-[20px] px-4 py-3 text-[0.9rem];
+    }
+
+    .tracker-page .log-item {
+        @apply relative rounded-[20px] px-4 py-3 text-[0.9rem];
+        border: 1px solid transparent;
+    }
+
+    .tracker-page .log-item.has-started-at {
+        padding-top: 34px;
+    }
+
+    .tracker-page .time-tracker-card .log-item {
+        @apply w-full rounded-2xl px-3 py-2.5;
+    }
+
+    .tracker-page .time-tracker-card .log-item.has-started-at {
+        padding-top: 34px;
+    }
+
+    .tracker-page .log-item::before {
+        content: attr(data-initial);
+        @apply pointer-events-none absolute inset-0 flex select-none items-center justify-center uppercase;
+        font-size: clamp(6.6rem, 22vw, 11.5rem);
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        color: rgba(55, 80, 109, 0.14);
+        z-index: 0;
+    }
+
+    .tracker-page.dark-theme .log-item::before {
+        color: rgba(255, 255, 255, 0.12);
+    }
+
+    .tracker-page .task-state-dot {
+        @apply absolute right-[14px] top-3 h-3 w-3 rounded-full;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .tracker-page .task-state-dot.running {
+        background: #34c759;
+    }
+
+    .tracker-page .task-state-dot.stopped {
+        background: #ff5252;
+    }
+
+    .tracker-page .task-state-dot.mid {
+        background: #f6c344;
+    }
+
+    .tracker-page .started-at-time {
+        @apply pointer-events-none absolute left-1/2 top-2.5 z-[3] text-center text-[0.78rem] font-bold;
+        transform: translateX(-50%);
+        color: var(--text-secondary);
+        letter-spacing: 0.02em;
+        line-height: 1;
+    }
+
+    .tracker-page .timer-row {
+        @apply mt-2 flex flex-wrap items-center gap-2;
+    }
+
+    .tracker-page .timer-btn,
+    .tracker-page .btn {
+        @apply cursor-pointer rounded-[20px] border-none px-[18px] py-2.5 text-[0.85rem] font-semibold transition;
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #f0f4f8, #ffffff);
+        transition: var(--transition);
+    }
+
+    .tracker-page .time-tracker-card .timer-row {
+        @apply mt-1.5 gap-1.5;
+    }
+
+    .tracker-page .time-tracker-card .timer-btn {
+        @apply px-2.5 py-1.5 text-[0.76rem];
+    }
+
+    .tracker-page .timer-btn:hover,
+    .tracker-page .remove-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .tracker-page .timer-btn:disabled {
+        @apply opacity-50;
+    }
+
+    .tracker-page .btn:active,
+    .tracker-page .remove-btn:active {
+        transform: translateY(0);
+        box-shadow: var(--shadow-inset);
+    }
+
+    .tracker-page .btn-primary,
+    .tracker-page .timer-btn.spend-btn,
+    .tracker-page .inline-spend-add-btn {
+        color: #ffffff;
+        background: linear-gradient(135deg, #7ec8a3, #5fb9d8);
+    }
+
+    .tracker-page .btn-primary {
+        background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+    }
+
+    .tracker-page .timer-btn.spend-btn {
+        box-shadow: 0 4px 8px rgba(87, 169, 167, 0.32);
+    }
+
+    .tracker-page .timer-btn.spend-btn:hover:not(:disabled) {
+        box-shadow: 0 6px 12px rgba(87, 169, 167, 0.46);
+    }
+
+    .tracker-page .timer-status,
+    .tracker-page .today-date,
+    .tracker-page .analysis-text,
+    .tracker-page .day,
+    .tracker-page .empty-note {
+        color: var(--text-secondary);
+    }
+
+    .tracker-page .timer-status {
+        @apply ml-auto text-[0.8rem];
+    }
+
+    .tracker-page .today-date,
+    .tracker-page .analysis-text,
+    .tracker-page .empty-note {
+        @apply text-[0.9rem];
+    }
+
+    .tracker-page .today-date {
+        @apply mb-3;
+    }
+
+    .tracker-page .empty-note {
+        @apply p-4 text-center;
+    }
+
+    .tracker-page .remove-btn {
+        @apply cursor-pointer rounded-[10px] border-none px-2 py-1 text-[0.75rem] font-semibold transition;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        transition: var(--transition);
+    }
+
+    .tracker-page .session-item {
+        @apply my-2 rounded-2xl px-[14px] py-2.5 text-[0.8rem];
+    }
+
+    .tracker-page .input-field,
+    .tracker-page .log-item input,
+    .tracker-page .inline-spend-editor input {
+        @apply w-full rounded-[20px] border-none px-4 py-3;
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #f0f4f8, #ffffff);
+        font-family: var(--font-sans);
+        transition: var(--transition);
+    }
+
+    .tracker-page .input-field {
+        @apply my-3;
+    }
+
+    .tracker-page .log-item input {
+        @apply my-2 rounded-2xl px-3 py-2.5;
+    }
+
+    .tracker-page .time-tracker-card .log-item input {
+        @apply my-1.5 rounded-xl px-2.5 py-2;
+    }
+
+    .tracker-page .input-field:focus,
+    .tracker-page .log-item input:focus {
+        outline: none;
+        box-shadow: var(--shadow-inset), 0 0 0 3px rgba(168, 213, 186, 0.2);
+    }
+
+    .tracker-page input[type="date"].input-field {
+        color-scheme: light;
+    }
+
+    .tracker-page.dark-theme input[type="date"].input-field,
+    .tracker-page.dark-theme select.input-field {
+        color-scheme: dark;
+    }
+
+    .tracker-page .plan-form {
+        @apply grid gap-3;
+    }
+
+    .tracker-page .section-bottom-right {
+        @apply relative;
+        grid-column: span 1;
+    }
+
+    .tracker-page .section-bottom-right .blob {
+        @apply pointer-events-none absolute;
+        right: -80px;
+        bottom: -60px;
+        width: 280px;
+        height: 240px;
+        opacity: 0.35;
+        border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+        background: linear-gradient(135deg, var(--accent-peach), var(--accent-blue));
+    }
+
+    .tracker-page .analysis-chart {
+        @apply my-4 flex h-[140px] items-end justify-around gap-2;
+    }
+
+    .tracker-page .bar-wrap {
+        @apply flex h-full flex-1 flex-col items-center justify-end gap-1.5;
+    }
+
+    .tracker-page .bar {
+        @apply mx-auto max-w-full overflow-x-auto;
+        width: fit-content;
+        min-height: 4px;
+        margin-bottom: 18px;
+        background: linear-gradient(180deg, var(--accent-peach), var(--accent-green));
+        transition: transform 0.2s;
+    }
+
+    .tracker-page .bar:hover {
+        transform: scaleY(1.05);
+    }
+
+    .tracker-page .day {
+        @apply w-full text-center text-[0.75rem];
+    }
+
+    .tracker-page .nav-dots {
+        @apply mt-4 flex justify-center gap-2;
+    }
+
+    .tracker-page .dot {
+        @apply h-2.5 w-2.5 cursor-pointer rounded-full transition;
+        background: rgba(200, 208, 224, 0.5);
+    }
+
+    .tracker-page .dot.active {
+        @apply w-6 rounded-[20px];
+        background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+    }
+
+    .tracker-page .icon-toggle-btn {
+        @apply inline-flex items-center justify-center rounded-full p-0;
+        width: 42px;
+        height: 42px;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+
+    .tracker-page .floating-add-btn {
+        @apply fixed z-[1200] rounded-full;
+        right: 20px;
+        bottom: 20px;
+        width: 56px;
+        height: 56px;
+        font-size: 1.8rem;
+        line-height: 1;
+    }
+
+    .tracker-page .add-task-modal {
+        @apply fixed z-[1190] overflow-y-auto;
+        right: 20px;
+        bottom: 88px;
+        width: min(360px, calc(100vw - 28px));
+        max-height: calc(100vh - 110px);
+        overscroll-behavior: contain;
+    }
+
+    .tracker-page .add-task-modal .card-title {
+        @apply mb-1.5;
+    }
+
+    .tracker-page .add-task-modal .card-subtitle {
+        @apply mb-2.5;
+    }
+
+    .tracker-page .add-task-header {
+        @apply mb-2 flex items-center justify-between gap-2.5;
+    }
+
+    .tracker-page .add-task-header .card-title {
+        @apply mb-0;
+    }
+
+    .tracker-page .add-task-panel-hidden,
+    .tracker-page .log-filter-date-input {
+        display: none;
+    }
+
+    .tracker-page .log-filter-date-input {
+        @apply m-0 max-w-[210px];
+    }
+
+    .tracker-page #addTaskPanel:not(.add-task-panel-hidden) {
+        border: 1px solid rgba(77, 144, 129, 0.45);
+        background: linear-gradient(145deg, #f8fbff, #edf4ff);
+        box-shadow: 0 16px 34px rgba(66, 88, 118, 0.26), 0 0 0 2px rgba(77, 144, 129, 0.22);
+    }
+
+    .tracker-page.dark-theme #addTaskPanel:not(.add-task-panel-hidden) {
+        border-color: rgba(130, 199, 178, 0.55);
+        background: linear-gradient(145deg, #2b3c54, #223146);
+        box-shadow: 0 18px 36px rgba(6, 12, 22, 0.62), 0 0 0 2px rgba(130, 199, 178, 0.28);
+    }
+
+    .tracker-page .inline-spend-editor {
+        @apply pointer-events-none absolute flex items-center gap-2 rounded-xl px-[10px] py-2 opacity-0;
+        right: 14px;
+        bottom: 68px;
+        min-width: 170px;
+        z-index: 6;
+        transform: translateY(6px);
+        background: linear-gradient(135deg, #f7fbff, #eef5ff);
+        box-shadow: 0 8px 16px rgba(66, 88, 118, 0.18);
+        transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .tracker-page .inline-spend-editor.is-open {
+        @apply pointer-events-auto opacity-100;
+        transform: translateY(0);
+    }
+
+    .tracker-page .inline-spend-editor input {
+        @apply m-0 w-[86px] rounded-[10px] px-2.5 py-2 text-[0.85rem];
+        background: #ffffff;
+    }
+
+    .tracker-page .inline-spend-add-btn {
+        @apply cursor-pointer rounded-[10px] border-none px-3 py-2 text-[0.8rem] font-semibold;
+    }
+
+    .tracker-page.dark-theme .inline-spend-editor {
+        background: linear-gradient(135deg, #1f2329, #2a2f36);
+        box-shadow: 0 10px 20px rgba(6, 12, 22, 0.52);
+    }
+
+    .tracker-page.dark-theme .inline-spend-editor input {
+        color: #f2f4f7;
+        background: #262b31;
+    }
+
+    .tracker-page .log-item.state-running {
+        border-color: rgba(52, 199, 89, 0.4);
+        background: linear-gradient(135deg, #e8f9ee, #ffffff);
+        box-shadow: 0 0 0 1px rgba(52, 199, 89, 0.18), 0 8px 20px rgba(52, 199, 89, 0.18) !important;
+    }
+
+    .tracker-page .log-item.state-stopped {
+        border-color: rgba(255, 82, 82, 0.45);
+        box-shadow: 0 0 0 1px rgba(255, 82, 82, 0.2), 0 8px 20px rgba(255, 82, 82, 0.16) !important;
+    }
+
+    .tracker-page .log-item.state-mid {
+        border-color: rgba(255, 193, 7, 0.55);
+        background: linear-gradient(135deg, #fff8e6, #ffffff);
+        box-shadow: 0 0 0 1px rgba(246, 195, 68, 0.25), 0 8px 20px rgba(246, 195, 68, 0.18) !important;
+    }
+
+    .tracker-page.dark-theme .log-item.state-running {
+        background: linear-gradient(135deg, rgba(52, 199, 89, 0.14), rgba(31, 42, 51, 0.98));
+        box-shadow: 0 0 0 1px rgba(52, 199, 89, 0.28), 0 10px 24px rgba(52, 199, 89, 0.2) !important;
+    }
+
+    .tracker-page.dark-theme .log-item.state-stopped {
+        box-shadow: 0 0 0 1px rgba(255, 82, 82, 0.3), 0 10px 24px rgba(255, 82, 82, 0.18) !important;
+    }
+
+    .tracker-page.dark-theme .log-item.state-mid {
+        box-shadow: 0 0 0 1px rgba(246, 195, 68, 0.32), 0 10px 24px rgba(246, 195, 68, 0.2) !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .tracker-page .main-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tracker-page .section-bottom-right,
+    .tracker-page .full-width {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 640px) {
+    .tracker-page .main-grid,
+    .tracker-page .time-tracker-card .log-container {
+        grid-template-columns: 1fr;
+    }
+
+    .tracker-page .section-bottom-right,
+    .tracker-page .full-width {
+        grid-column: span 1;
+    }
+
+    .tracker-page .floating-add-btn {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .tracker-page .add-task-modal {
+        right: 10px;
+        bottom: 76px;
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 92px);
+    }
+}

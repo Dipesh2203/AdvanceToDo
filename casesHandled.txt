@@ -1,0 +1,21 @@
+Case 1: Task Restore Without Losing Original Progress
+Problem: Restoring a completed task was resetting logged time to 0
+Solution: Added restoreCompletedTask() that prompts for extra rework minutes and stores state.reworkPlans to preserve the original progress + add extra time separately
+
+Case 2: Rework Targets Lost on Page Reload
+Problem: After adding rework time, refreshing the page lost the rework target (only in memory), so timer never auto-completed
+Solution: Migrated reworkPlans from memory to persisted state.reworkPlans with load/save logic
+
+Case 3: Log Inconsistency Across Views
+Problem: Task log showed 15 min but session summary/trends showed 18 min for the same task
+Solution: One-time SQLite sync to align logs, verified logToday matches sessionToday across all views
+
+Case 4: Legacy Auto-Filled Deadlines
+Problem: Old everyday tasks had mistaken deadlines matching creation date (e.g., 2026-03-30), showing as overdue and triggering false reminders
+Solution: Pattern detection isLegacyCreationDateDeadline() to strip these dates on load and in server reminder scan
+
+*Case 5: Multi-Device Offline Sync Data Loss
+Problem: Device 1 logs 25 min offline → Device 2 syncs 40 min first → Server has 40 min → Device 1 refreshes and loses its 25 min
+Solution: Added isServerReachable() check before page refresh (HEAD request, 2-sec timeout)
+If server offline → skip fetch, keep local data safe
+If server online → proceed with normal GET (last-sync wins, expected)

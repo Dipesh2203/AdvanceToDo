@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Diary | Synttactic Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/daily-blog.css" />
+</head>
+
+<body>
+    <main class="dashboard-shell">
+        <div class="header">
+            <div class="header-row">
+                <h1>Daily Diary</h1>
+                <nav class="nav-rail">
+                    <a href="/tracker" class="nav-link">Tracker</a>
+                    <a href="/reports" class="nav-link">Reports</a>
+                    <a href="/skill-radar" class="nav-link">Skill Radar</a>
+                    <a href="/blog" class="nav-link active">Daily Blog</a>
+                </nav>
+                <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch theme">🌙 Dark</button>
+            </div>
+            <p>Write what you worked on each day, keep a private diary, and revisit it anytime from your account.</p>
+        </div>
+
+        <div class="private-note">
+            <strong>Private diary storage</strong>
+            <p>Entries are saved through your signed-in server session, so each user only sees their own diary.</p>
+        </div>
+
+        <div id="authGate" class="auth-gate" hidden>
+            <strong>Sign in required</strong>
+            <p>This diary is private to your account. Sign in on the tracker page to create and view your entries.</p>
+        </div>
+
+        <section id="diaryLayout" class="layout">
+            <article class="card">
+                <h2 class="title">Write Today Entry</h2>
+                <p class="subtitle">Track your day in one place.</p>
+
+                <form id="blogForm">
+                    <div class="grid-two">
+                        <div class="field-wrap">
+                            <label for="reportDate">Date</label>
+                            <input id="reportDate" class="field" type="date" required />
+                        </div>
+                        <div class="field-wrap">
+                            <label for="reportTitle">Title</label>
+                            <input id="reportTitle" class="field" type="text" maxlength="90"
+                                placeholder="Example: Client dashboard updates" required />
+                        </div>
+                    </div>
+
+                    <div class="field-wrap">
+                        <label for="workDone">What work did you do?</label>
+                        <textarea id="workDone" class="field" required
+                            placeholder="Describe the key tasks, meetings, coding, research, or planning work done today."></textarea>
+                    </div>
+
+                    <div class="field-wrap">
+                        <label for="highlights">Highlights / outcomes</label>
+                        <textarea id="highlights" class="field"
+                            placeholder="What got completed? What moved forward?"></textarea>
+                    </div>
+
+                    <div class="field-wrap">
+                        <label for="nextStep">Plan for next day</label>
+                        <textarea id="nextStep" class="field"
+                            placeholder="What is the next most important thing you will do tomorrow?"></textarea>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" type="submit" id="saveButton">Save Diary Entry</button>
+                        <button class="btn" type="button" id="clearButton">Clear Form</button>
+                    </div>
+                    <div id="status" class="status" aria-live="polite"></div>
+                </form>
+            </article>
+
+            <article class="card">
+                <h2 class="title">Saved Entries</h2>
+                <p class="subtitle">Search, edit, and review your private diary history.</p>
+
+                <div class="stats">
+                    <div class="stat">
+                        <small>Total entries</small>
+                        <strong id="totalReports">0</strong>
+                    </div>
+                    <div class="stat">
+                        <small>Latest entry</small>
+                        <strong id="latestReport">-</strong>
+                    </div>
+                    <div class="stat">
+                        <small>Current streak</small>
+                        <strong id="streakCount">0 days</strong>
+                    </div>
+                </div>
+
+                <div class="field-wrap">
+                    <label for="searchInput">Search entries</label>
+                    <input id="searchInput" class="search-input" type="text"
+                        placeholder="Search by title or diary content" />
+                </div>
+
+                <div id="entryList" class="entry-list"></div>
+
+                <section class="diary-chat-shell" aria-label="Diary assistant">
+                    <h3 class="title" style="font-size:1rem; margin-bottom:4px;">Diary Assistant</h3>
+                    <p class="subtitle" style="margin-bottom:10px;">Chat with your private diary context and tracker
+                        summary.</p>
+                    <div id="connectionStatus" class="chat-status" aria-live="polite"></div>
+                    <div id="messages" class="chat-messages" aria-live="polite"></div>
+                    <form id="chatForm" class="chat-form">
+                        <input id="userInput" class="field chat-input" type="text" maxlength="500"
+                            placeholder="Ask: What should I focus on next?" required />
+                        <button class="btn btn-primary" type="submit">Send</button>
+                    </form>
+                </section>
+            </article>
+        </section>
+
+    </main>
+
+    <script type="module" src="/js/account-controls.js"></script>
+    <script>
+        const LEGACY_BLOG_KEY = "study-tracker-daily-blog-v1";
+        const API_ME_ENDPOINT = "/api/me";
+        const DIARY_API_ENDPOINT = "/api/diary";
+        const THEME_KEY = "study-tracker-theme";
+
+        const blogForm = document.getElementById("blogForm");
+        const reportDateInput = document.getElementById("reportDate");
+        const reportTitleInput = document.getElementById("reportTitle");
+        const workDoneInput = document.getElementById("workDone");
+        const highlightsInput = document.getElementById("highlights");
+        const nextStepInput = document.getElementById("nextStep");
+        const statusEl = document.getElementById("status");
+        const entryListEl = document.getElementById("entryList");
+        const clearButton = document.getElementById("clearButton");
+        const totalReportsEl = document.getElementById("totalReports");
+        const latestReportEl = document.getElementById("latestReport");
+        const streakCountEl = document.getElementById("streakCount");
+        const searchInputEl = document.getElementById("searchInput");
+        const themeToggleEl = document.getElementById("themeToggle");
+        const authGateEl = document.getElementById("authGate");
+        const diaryLayoutEl = document.getElementById("diaryLayout");
+
+        let reports = [];
+        let editingReportId = null;
+        let currentUser = null;
+
+        void initialize();
+
+        async function initialize() {
+            setupTheme();
+            currentUser = await resolveCurrentUser();
+
+            if (!currentUser) {
+                showAuthGate();
+                return;
+            }
+
+            hideAuthGate();
+            reportDateInput.value = formatDateKey(new Date());
+            await loadReports();
+            await migrateLegacyReportsIfNeeded();
+            renderReports();
+
+            blogForm.addEventListener("submit", (event) => {
+                void onSaveReport(event);
+            });
+
+            clearButton.addEventListener("click", resetForm);
+            searchInputEl.addEventListener("input", renderReports);
+        }
+
+        async function resolveCurrentUser() {
+            try {
+                const response = await fetch(API_ME_ENDPOINT, {
+                    method: "GET",
+                    cache: "no-store",
+                    credentials: "same-origin"
+                });
+
+                if (!response.ok) {
+                    return null;
+                }
+
+                const payload = await response.json();
+                return payload && payload.user ? payload.user : null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        function showAuthGate() {
+            if (authGateEl) {
+                authGateEl.hidden = false;
+            }
+
+            if (diaryLayoutEl) {
+                diaryLayoutEl.style.display = "none";
+            }
+
+            statusEl.textContent = "Sign in to create and read your private diary entries.";
+        }
+
+        function hideAuthGate() {
+            if (authGateEl) {
+                authGateEl.hidden = true;
+            }
+
+            if (diaryLayoutEl) {
+                diaryLayoutEl.style.display = "grid";
+            }
+        }
+
+        function setupTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+            applyTheme(savedTheme);
+
+            themeToggleEl.addEventListener("click", () => {
+                const isDark = document.body.classList.contains("dark-theme");
+                applyTheme(isDark ? "light" : "dark");
+            });
+        }
+
+        function applyTheme(theme) {
+            if (theme === "dark") {
+                document.body.classList.add("dark-theme");
+                themeToggleEl.textContent = "☀ Light";
+                themeToggleEl.setAttribute("aria-label", "Switch to light theme");
+            } else {
+                document.body.classList.remove("dark-theme");
+                themeToggleEl.textContent = "🌙 Dark";
+                themeToggleEl.setAttribute("aria-label", "Switch to dark theme");
+            }
+
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        async function loadReports() {
+            try {
+                const response = await fetch(DIARY_API_ENDPOINT, {
+                    method: "GET",
+                    cache: "no-store",
+                    credentials: "same-origin"
+                });
+
+                if (response.status === 401) {
+                    reports = [];
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Failed to load diary entries");
+                }
+
+                const payload = await response.json();
+                reports = Array.isArray(payload && payload.entries) ? payload.entries : [];
+            } catch (_error) {
+                reports = [];
+            }
+        }
+
+        async function migrateLegacyReportsIfNeeded() {
+            if (!currentUser || reports.length > 0) {
+                return;
+            }
+
+            let legacyReports = [];
+            try {
+                const raw = localStorage.getItem(LEGACY_BLOG_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                legacyReports = Array.isArray(parsed) ? parsed : [];
+            } catch (_error) {
+                legacyReports = [];
+            }
+
+            const normalizedLegacyReports = legacyReports
+                .map((report) => ({
+                    date: report && report.date ? String(report.date) : "",
+                    title: report && report.title ? String(report.title) : "",
+                    workDone: report && report.workDone ? String(report.workDone) : "",
+                    highlights: report && report.highlights ? String(report.highlights) : "",
+                    nextStep: report && report.nextStep ? String(report.nextStep) : ""
+                }))
+                .filter((report) => report.date && report.title && report.workDone);
+
+            if (normalizedLegacyReports.length === 0) {
+                return;
+            }
+
+            for (const report of normalizedLegacyReports) {
+                await fetch(DIARY_API_ENDPOINT, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(report)
+                });
+            }
+
+            localStorage.removeItem(LEGACY_BLOG_KEY);
+            await loadReports();
+        }
+
+        async function onSaveReport(event) {
+            event.preventDefault();
+
+            const date = reportDateInput.value;
+            const title = reportTitleInput.value.trim();
+            const workDone = workDoneInput.value.trim();
+            const highlights = highlightsInput.value.trim();
+            const nextStep = nextStepInput.value.trim();
+
+            if (!date || !title || !workDone) {
+                statusEl.textContent = "Date, title, and work details are required.";
+                return;
+            }
+
+            const payload = {
+                date,
+                title,
+                workDone,
+                highlights,
+                nextStep
+            };
+
+            const endpoint = editingReportId ? `${DIARY_API_ENDPOINT}/${editingReportId}` : DIARY_API_ENDPOINT;
+            const method = editingReportId ? "PUT" : "POST";
+
+            try {
+                const response = await fetch(endpoint, {
+                    method,
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 401) {
+                    showAuthGate();
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorPayload = await response.json().catch(() => ({}));
+                    throw new Error(errorPayload.error || "Failed to save diary entry");
+                }
+
+                editingReportId = null;
+                statusEl.textContent = method === "PUT" ? "Diary entry updated." : "Diary entry saved.";
+                await loadReports();
+                resetForm();
+                renderReports();
+            } catch (error) {
+                statusEl.textContent = error && error.message ? error.message : "Failed to save diary entry.";
+            }
+        }
+
+        function resetForm() {
+            editingReportId = null;
+            blogForm.reset();
+            reportDateInput.value = formatDateKey(new Date());
+            document.getElementById("saveButton").textContent = "Save Diary Entry";
+        }
+
+        function renderReports() {
+            const keyword = searchInputEl.value.trim().toLowerCase();
+            const ordered = [...reports].sort((a, b) => b.date.localeCompare(a.date));
+            const filtered = keyword
+                ? ordered.filter((report) => {
+                    const body = `${report.title} ${report.workDone} ${report.highlights || ""} ${report.nextStep || ""}`
+                        .toLowerCase();
+                    return body.includes(keyword);
+                })
+                : ordered;
+
+            updateStats(ordered);
+
+            if (!filtered.length) {
+                entryListEl.innerHTML = '<div class="empty">No diary entries found. Start writing your first entry.</div>';
+                return;
+            }
+
+            entryListEl.innerHTML = filtered.map((report) => `
+                <article class="entry">
+                    <div class="entry-header">
+                        <div>
+                            <h4>${escapeHtml(report.title)}</h4>
+                            <div class="entry-date">${formatReadableDate(report.date)}</div>
+                        </div>
+                    </div>
+                    <p><strong>Work done</strong>${escapeHtml(report.workDone)}</p>
+                    <p><strong>Highlights</strong>${escapeHtml(report.highlights || "-")}</p>
+                    <p><strong>Next step</strong>${escapeHtml(report.nextStep || "-")}</p>
+                    <div class="entry-actions">
+                        <button class="btn" type="button" onclick="editReport('${report.id}')">Edit</button>
+                        <button class="btn btn-danger" type="button" onclick="deleteReport('${report.id}')">Delete</button>
+                    </div>
+                </article>
+            `).join("");
+        }
+
+        function updateStats(orderedReports) {
+            totalReportsEl.textContent = String(orderedReports.length);
+
+            if (!orderedReports.length) {
+                latestReportEl.textContent = "-";
+                streakCountEl.textContent = "0 days";
+                return;
+            }
+
+            latestReportEl.textContent = formatReadableDate(orderedReports[0].date, true);
+            const streak = calculateStreak(orderedReports);
+            streakCountEl.textContent = `${streak} day${streak > 1 ? "s" : ""}`;
+        }
+
+        function calculateStreak(orderedReports) {
+            const uniqueDates = [...new Set(orderedReports.map((report) => report.date))].sort((a, b) => b.localeCompare(a));
+            if (!uniqueDates.length) {
+                return 0;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let expected = today;
+            let streak = 0;
+
+            if (uniqueDates[0] !== formatDateKey(today)) {
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                if (uniqueDates[0] !== formatDateKey(yesterday)) {
+                    return 0;
+                }
+                expected = yesterday;
+            }
+
+            for (const dateKey of uniqueDates) {
+                if (dateKey !== formatDateKey(expected)) {
+                    break;
+                }
+
+                streak += 1;
+                expected = new Date(expected);
+                expected.setDate(expected.getDate() - 1);
+            }
+
+            return streak;
+        }
+
+        function editReport(reportId) {
+            const report = reports.find((item) => item.id === reportId);
+            if (!report) {
+                return;
+            }
+
+            editingReportId = report.id;
+            reportDateInput.value = report.date;
+            reportTitleInput.value = report.title;
+            workDoneInput.value = report.workDone;
+            highlightsInput.value = report.highlights || "";
+            nextStepInput.value = report.nextStep || "";
+            document.getElementById("saveButton").textContent = "Update Entry";
+            statusEl.textContent = "Editing diary entry. Save to update.";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        async function deleteReport(reportId) {
+            const report = reports.find((item) => item.id === reportId);
+            if (!report) {
+                return;
+            }
+
+            const confirmed = window.confirm(`Delete diary entry for ${formatReadableDate(report.date)}?`);
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${DIARY_API_ENDPOINT}/${reportId}`, {
+                    method: "DELETE",
+                    credentials: "same-origin"
+                });
+
+                if (response.status === 401) {
+                    showAuthGate();
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorPayload = await response.json().catch(() => ({}));
+                    throw new Error(errorPayload.error || "Failed to delete diary entry");
+                }
+
+                await loadReports();
+                renderReports();
+
+                if (editingReportId === reportId) {
+                    resetForm();
+                }
+
+                statusEl.textContent = "Diary entry deleted.";
+            } catch (error) {
+                statusEl.textContent = error && error.message ? error.message : "Failed to delete diary entry.";
+            }
+        }
+
+        function formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatReadableDate(dateKey, short = false) {
+            if (!dateKey) {
+                return "-";
+            }
+
+            const [year, month, day] = dateKey.split("-").map(Number);
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString(undefined, {
+                year: short ? undefined : "numeric",
+                month: "short",
+                day: "numeric",
+                weekday: short ? undefined : "short"
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;")
+                .replace(/\n/g, "<br>");
+        }
+
+        window.editReport = editReport;
+        window.deleteReport = deleteReport;
+    </script>
+    <script src="/js/chatbot.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ER Diagram Viewer</title>
+  <style>
+    body {
+      font-family:
+        system-ui,
+        Segoe UI,
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+      padding: 16px;
+      background: #fff;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    button {
+      margin: 8px 0;
+      padding: 8px 12px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h2>ER Diagram</h2>
+    <p>
+      Open this file in a browser. The diagram shows the real SQLite tables
+      plus a logical `SUBJECTS` model extracted from `user_state.state_json`
+      so the task data is visible.
+    </p>
+    <button id="exportPng">Download PNG (via SVG → PNG)</button>
+    <div class="mermaid" id="diagram">
+      erDiagram
+      USERS ||--o{ SESSIONS : "has"
+      USERS ||--o{ USER_STATE : "has"
+      USERS ||--o{ DIARY_ENTRIES : "owns"
+      USERS ||--o{ SUBJECTS : "owns"
+      USERS ||--o{ REMINDERS_SENT : "owns"
+      USERS ||--o{ REMINDER_SCAN_STATE_V2 : "tracks"
+      SUBJECTS ||--o{ REMINDERS_SENT : "referenced_by"
+
+      USERS {
+      int id PK
+      string username UK
+      string display_name
+      string password_hash
+      string password_salt
+      int is_guest
+      string created_at
+      }
+
+      SESSIONS {
+      int id PK
+      int user_id FK
+      string token_hash UK
+      string created_at
+      string expires_at
+      string last_seen_at
+      }
+
+      USER_STATE {
+      int user_id PK, FK
+      string state_json
+      string updated_at
+      }
+
+      SUBJECTS {
+      string id PK
+      int user_id FK
+      string subject
+      int target
+      string frequency
+      string due_date
+      string skill_tags
+      string factor_tags
+      bool archived
+      string created_at
+      string updated_at
+      }
+
+      APP_STATE {
+      int id PK
+      string state_json
+      string updated_at
+      }
+
+      DIARY_ENTRIES {
+      int id PK
+      int user_id FK
+      string entry_date
+      string title
+      string work_done
+      string highlights
+      string next_step
+      string created_at
+      string updated_at
+      }
+
+      REMINDERS_SENT {
+      int id PK
+      int user_id FK
+      string task_id FK
+      string due_date
+      string reminder_type
+      string sent_at
+      }
+
+      REMINDER_SCAN_STATE_V2 {
+      int id PK
+      int user_id FK
+      string last_scan_date
+      string last_scan_at
+      }
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: "default" });
+
+    document
+      .getElementById("exportPng")
+      .addEventListener("click", async () => {
+        // Rendered SVG will be inside the container; find first SVG
+        const svg = document.querySelector(".container svg");
+        if (!svg) {
+          alert("Diagram not rendered yet. Wait a moment and try again.");
+          return;
+        }
+
+        // Serialize SVG to string
+        const svgString = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement("canvas");
+        const bbox = svg.getBBox();
+        canvas.width = Math.ceil(bbox.width + bbox.x + 20);
+        canvas.height = Math.ceil(bbox.height + bbox.y + 20);
+        const ctx = canvas.getContext("2d");
+
+        const img = new Image();
+        const svgBlob = new Blob([svgString], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((blob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "er-diagram-tracker.png";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          }, "image/png");
+        };
+
+        img.onerror = () => {
+          alert(
+            "Failed to rasterize SVG in this browser. Use the CLI: `mmdc -i er-diagram-tracker.mmd -o er-diagram-tracker.png`.",
+          );
+        };
+
+        img.src = url;
+      });
+  </script>
+</body>
+
+</html>

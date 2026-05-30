@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reports | Neumorphism Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/reports.css" />
+</head>
+
+<body>
+    <main class="dashboard-shell">
+        <div class="header">
+            <div class="header-row">
+                <h1>Reports & Analytics</h1>
+                <nav class="nav-rail">
+                    <a href="/tracker" class="nav-link">Tracker</a>
+                    <a href="/reports" class="nav-link active">Reports</a>
+                    <a href="/skill-radar" class="nav-link">Skill Radar</a>
+                    <a href="/blog" class="nav-link">Daily Blog</a>
+                </nav>
+                <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark theme">🌙
+                    Dark</button>
+            </div>
+            <p>Detailed report view with historical data</p>
+        </div>
+
+        <div class="contribution-card">
+            <div class="graph-header contribution-card-header">
+                <div>
+                    <div class="card-title">Contribution Chart</div>
+                    <div class="card-subtitle">Each month is shown as its own mini calendar</div>
+                </div>
+                <div class="contribution-filter">
+                    <label for="contributionYearFilter" class="contribution-filter-label">Year</label>
+                    <select id="contributionYearFilter" class="timer-btn contribution-year-select"
+                        aria-label="Filter contribution chart by year"></select>
+                </div>
+                <div class="graph-footer">
+                    <span>Less</span>
+                    <div class="legend">
+                        <div class="sq level-0"></div>
+                        <div class="sq level-1"></div>
+                        <div class="sq level-2"></div>
+                        <div class="sq level-3"></div>
+                        <div class="sq level-4"></div>
+                    </div>
+                    <span>More</span>
+                </div>
+            </div>
+
+            <div id="contribution-graph-container" class="contribution-month-grid"></div>
+        </div>
+
+        <!-- Year & Insight Card -->
+        <div class="card full-width" id="yearInsightCard">
+            <div class="card-title">Year & Insight</div>
+            <div class="card-subtitle">Annual focus summary and bests</div>
+            <div id="yearInsightStats" class="summary-metrics" style="grid-template-columns: 1fr 1fr 1fr;"></div>
+            <div id="yearInsightBests" class="streak-grid" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="card full-width ">
+            <div class="card-title">Pomodoro Activity Timeline</div>
+            <div id="activityTimelineSubtitle" class="card-subtitle">See when you were active during each day</div>
+            <div id="activityTimelineList" class="activity-timeline-list"></div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Daily Study Times -->
+            <div class="card">
+                <div class="card-title">Daily Study Times</div>
+                <div class="card-subtitle">Last 10 days trend</div>
+                <div id="miniChart" class="mini-chart"></div>
+            </div>
+
+            <!-- Weekly Timeline Analysis -->
+            <div class="card">
+                <div class="card-title">Weekly Timeline</div>
+                <div class="card-subtitle">7-day detailed breakdown</div>
+                <div id="analysisChart" class="analysis-chart"></div>
+                <p id="analysisText" class="analysis-text"></p>
+            </div>
+
+            <!-- Assigned Tasks Card -->
+            <div class="card">
+                <div class="card-title">Assigned Tasks</div>
+                <div class="card-subtitle">Your planned subjects and targets</div>
+                <ul id="planList" class="plan-list"></ul>
+                <div class="timer-row" style="margin-top: 12px;">
+                    <button id="checkPendingButton" type="button" class="timer-btn">Check Pending (No Email)</button>
+                    <button id="enableNotificationsButton" type="button" class="timer-btn">Enable Notifications</button>
+                </div>
+                <div id="notificationPermissionStatus" class="card-subtitle"
+                    style="margin-top: 8px; margin-bottom: 6px;"></div>
+                <div id="pendingReminderStatus" class="card-subtitle" style="margin-top: 8px; margin-bottom: 6px;">
+                </div>
+                <ul id="pendingReminderList" class="plan-list" style="max-height: 180px; overflow-y: auto;"></ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">What Needs Attention Next</div>
+                <div id="attentionSummary" class="card-subtitle">Prioritized focus suggestions from your task data</div>
+                <ul id="attentionList" class="attention-list"></ul>
+            </div>
+
+            <!-- Daily Totals Table -->
+            <div class="card span-2">
+                <div class="card-title">Historical Data</div>
+                <div class="card-subtitle">Recent 14-day detailed report</div>
+                <div class="analysis-text"
+                    style="margin-top: 4px; margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <button type="button" class="theme-toggle history-filter-tag" data-log-filter="today"
+                        aria-pressed="true">Today</button>
+                    <button type="button" class="theme-toggle history-filter-tag" data-log-filter="week"
+                        aria-pressed="false">This
+                        Week</button>
+                    <button type="button" class="theme-toggle history-filter-tag" data-log-filter="month"
+                        aria-pressed="false">This
+                        Month</button>
+                    <button type="button" class="theme-toggle history-filter-tag" data-log-filter="all"
+                        aria-pressed="false">All</button>
+                    <button type="button" class="theme-toggle history-filter-tag" data-log-filter="date"
+                        aria-pressed="false">Custom
+                        Date</button>
+                    <input id="logFilterDate" type="date" class="history-filter-date" />
+                    <span id="logFilterSummary" style="font-size: 0.82rem; color: var(--text-secondary);"></span>
+                </div>
+                <div class="table-wrap">
+                    <table class="tracker-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Study (Spent / Required)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trackerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+
+        </div>
+    </main>
+
+    <script type="module" src="/js/script.js"></script>
+    <script type="module" src="/js/report.js"></script>
+</body>
+
+</html>

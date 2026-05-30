@@ -1,0 +1,88 @@
+erDiagram
+    USERS {
+        INTEGER id PK
+        TEXT username
+        TEXT display_name
+        TEXT password_hash
+        TEXT password_salt
+        INTEGER is_guest
+        TEXT created_at
+    }
+
+    SESSIONS {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT token_hash
+        TEXT created_at
+        TEXT expires_at
+        TEXT last_seen_at
+    }
+
+    USER_STATE {
+        INTEGER user_id PK
+        TEXT state_json
+        TEXT updated_at
+    }
+
+    SUBJECTS {
+        TEXT id PK
+        TEXT subject
+        INTEGER target
+        TEXT frequency
+        TEXT dueDate
+        TEXT skillTags
+        TEXT factorTags
+        BOOLEAN archived
+    }
+
+    APP_STATE {
+        INTEGER id PK
+        TEXT state_json
+        TEXT updated_at
+    }
+
+    DIARY_ENTRIES {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT entry_date
+        TEXT title
+        TEXT work_done
+        TEXT highlights
+        TEXT next_step
+        TEXT created_at
+        TEXT updated_at
+    }
+
+    DIARY_ENTRIES_REBUILT {
+        INTEGER id PK
+        INTEGER user_id
+        TEXT entry_date
+        TEXT title
+        TEXT work_done
+        TEXT highlights
+        TEXT next_step
+        TEXT created_at
+        TEXT updated_at
+    }
+
+    REMINDERS_SENT {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT task_id
+        TEXT due_date
+        TEXT reminder_type
+        TEXT sent_at
+    }
+
+    REMINDER_SCAN_STATE {
+        INTEGER id PK
+        TEXT last_scan_date
+        TEXT last_scan_at
+    }
+
+    USERS ||--o{ SESSIONS : "has"
+    USERS ||--o{ DIARY_ENTRIES : "owns"
+    USERS ||--|| USER_STATE : "has"
+    USER_STATE ||--o{ SUBJECTS : "contains subjects[] in state_json"
+    USERS ||--o{ REMINDERS_SENT : "owns"
+    DIARY_ENTRIES ||--|| DIARY_ENTRIES_REBUILT : "rebuilds"
